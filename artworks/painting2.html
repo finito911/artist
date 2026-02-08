@@ -5,35 +5,689 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painting Title - Artist Portfolio</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="../css/style.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --primary: #4a6fa5;
+            --secondary: #d4af37;
+            --dark: #1a1a2e;
+            --light: #f8f9fa;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            padding-top: 56px;
+        }
+        
+        .navbar {
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary), #2c3e50);
+            color: white;
+            padding: 3rem 0;
+            margin-top: 56px;
+        }
+        
+        .artwork-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .artwork-image {
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease;
+            width: 100%;
+            height: auto;
+        }
+        
+        .artwork-image:hover {
+            transform: scale(1.02);
+        }
+        
+        .feature-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+        
+        .feature-btn {
+            border-radius: 30px;
+            padding: 8px 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+        }
+        
+        .btn-zoom {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-ar {
+            background: var(--secondary);
+            color: var(--dark);
+        }
+        
+        .btn-zoom:hover {
+            background: #3a5a80;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .btn-ar:hover {
+            background: #b8972d;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .artwork-details h2 {
+            color: var(--dark);
+            border-bottom: 2px solid var(--secondary);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .detail-item {
+            margin-bottom: 12px;
+            display: flex;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            min-width: 100px;
+            color: var(--primary);
+        }
+        
+        .artist-notes {
+            background: #eef2f7;
+            border-left: 4px solid var(--secondary);
+            padding: 20px;
+            border-radius: 0 8px 8px 0;
+            margin-top: 20px;
+        }
+        
+        .related-works .card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: none;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+        }
+        
+        .related-works .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        
+        .related-works .card-img-top {
+            height: 200px;
+            object-fit: cover;
+        }
+        
+        footer {
+            background: var(--dark);
+            color: white;
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+        
+        /* AR Simulation Styles */
+        .ar-simulation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        .ar-content {
+            width: 90%;
+            max-width: 800px;
+            height: 80vh;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .ar-header {
+            background: var(--dark);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .ar-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .ar-viewer {
+            width: 100%;
+            height: calc(100% - 60px);
+            position: relative;
+            overflow: hidden;
+            background: #f0f0f0;
+        }
+        
+        .ar-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .ar-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 10;
+        }
+        
+        .ar-control-btn {
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .ar-control-btn:hover {
+            background: rgba(0,0,0,0.9);
+            transform: scale(1.1);
+        }
+        
+        .ar-instructions {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            max-width: 300px;
+        }
+        
+        .ar-painting {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 80%;
+            max-height: 80%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 5px solid white;
+            cursor: move;
+        }
+        
+        .ar-floor {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 30%;
+            background: linear-gradient(to top, #7c432a, #a0522d);
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .ar-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        
+        .ar-walls {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 70%;
+            background: linear-gradient(to bottom, #dcdcdc, #f5f5f5);
+        }
+        
+        /* QR Code Modal */
+        .qr-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1001;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        .qr-content {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            max-width: 90%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .qr-code-container {
+            width: 250px;
+            height: 250px;
+            margin: 20px auto;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+        }
+        
+        .qr-instructions {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .qr-close {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            margin-top: 20px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 768px) {
+            .feature-buttons {
+                flex-direction: column;
+            }
+            
+            .ar-content {
+                width: 95%;
+                height: 85vh;
+            }
+            
+            .ar-instructions {
+                font-size: 0.8rem;
+                max-width: 200px;
+            }
+            
+            .qr-code-container {
+                width: 200px;
+                height: 200px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <!-- Navigation same as above -->
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="../index.html">Finito911</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link" href="../about.html">About</a>
+                    <a class="nav-link" href="../gallery.html">Gallery</a>
+                    <a class="nav-link" href="../contact.html">Contact</a>
+                </div>
+            </div>
+        </div>
+    </nav>
 
+    <!-- Hero Section -->
+    <header class="hero-section text-center py-5">
+        <div class="container">
+            <h1 class="display-4">Artwork Details</h1>
+            <p class="lead">Explore this piece in depth</p>
+        </div>
+    </header>
+
+    <!-- Artwork Detail Section -->
     <section class="py-5">
         <div class="container">
             <div class="row">
-                <div class="col-md-8">
-                    <img src="../images/artworks/painting1.jpg" alt="Painting Title" class="img-fluid rounded shadow">
-                    
-                    <!-- AR/Zoom Features -->
-                    <div class="mt-4">
-                        <button class="btn btn-outline-primary me-2">Zoom In</button>
-                        <button class="btn btn-outline-success">AR View</button>
+                <div class="col-md-8 mb-4">
+                    <div class="artwork-container">
+                        <img src="https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Painting Title" class="img-fluid rounded shadow artwork-image" id="mainImage">
+                        
+                        <!-- AR/Zoom Features -->
+                        <div class="feature-buttons">
+                            <button class="btn feature-btn btn-zoom me-2 mb-2">
+                                <i class="fas fa-search-plus me-2"></i>Zoom In
+                            </button>
+                            <button class="btn feature-btn btn-ar mb-2" id="arButton">
+                                <i class="fas fa-vr-cardboard me-2"></i>AR View
+                            </button>
+                            <button class="btn feature-btn btn-secondary mb-2" id="qrButton">
+                                <i class="fas fa-qrcode me-2"></i>QR for Mobile AR
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <h2>Painting Title</h2>
-                    <p><strong>Year:</strong> 2024</p>
-                    <p><strong>Medium:</strong> Oil on Canvas</p>
-                    <p><strong>Dimensions:</strong> 24" x 36"</p>
-                    <p><strong>Description:</strong> Detailed description of the artwork...</p>
-                    <p><strong>Inspiration:</strong> What inspired this piece...</p>
-                    
-                    <button class="btn btn-success mt-3">Contact for Purchase</button>
+                    <div class="artwork-details">
+                        <h2>Contemplation at Dusk</h2>
+                        <div class="detail-item">
+                            <span class="detail-label">Year:</span>
+                            <span>2024</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Medium:</span>
+                            <span>Oil on Canvas</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Dimensions:</span>
+                            <span>24" x 36"</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Description:</span>
+                            <span>A serene portrait capturing the introspective mood of twilight hours.</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Inspiration:</span>
+                            <span>The quiet moments of reflection we often overlook in our busy lives.</span>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button class="btn btn-primary w-100">
+                                <i class="fas fa-envelope me-2"></i>Contact for Purchase
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Information -->
+            <div class="row mt-5">
+                <div class="col-12">
+                    <h3 class="mb-4">Artist's Notes</h3>
+                    <div class="artist-notes">
+                        <p>This piece represents a moment of introspection during a transformative period in my life. The interplay of warm and cool tones reflects the duality of human emotion - the tension between joy and melancholy that defines our existence.</p>
+                        <p>The brushwork was intentionally loose in some areas to convey movement and energy, while more controlled in others to create focal points that draw the viewer's eye through the composition.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Works -->
+            <div class="row mt-5">
+                <div class="col-12">
+                    <h3 class="mb-4">Related Works</h3>
+                    <div class="row related-works">
+                        <div class="col-md-4 mb-4">
+                            <div class="card">
+                                <img src="https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" class="card-img-top" alt="Related Artwork">
+                                <div class="card-body">
+                                    <h5 class="card-title">Emotional Landscape</h5>
+                                    <p class="card-text">Oil on canvas, 2023</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="card">
+                                <img src="https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" class="card-img-top" alt="Related Artwork">
+                                <div class="card-body">
+                                    <h5 class="card-title">Silent Moments</h5>
+                                    <p class="card-text">Watercolor, 2022</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="card">
+                                <img src="https://images.unsplash.com/photo-1578301978018-3030d5f7e9d5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" class="card-img-top" alt="Related Artwork">
+                                <div class="card-body">
+                                    <h5 class="card-title">Inner Reflection</h5>
+                                    <p class="card-text">Mixed media, 2023</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
+
+    <!-- AR Simulation Modal -->
+    <div class="ar-simulation" id="arSimulation">
+        <div class="ar-content">
+            <div class="ar-header">
+                <h5>AR Wall Placement Simulation</h5>
+                <button class="ar-close" id="closeAr">&times;</button>
+            </div>
+            <div class="ar-viewer">
+                <div class="ar-grid"></div>
+                <div class="ar-walls"></div>
+                <div class="ar-floor"></div>
+                <img src="https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="AR Painting" class="ar-painting" id="arPainting">
+                <div class="ar-instructions">
+                    Drag to move the painting | Scroll/pinch to resize | Click controls to rotate
+                </div>
+                <div class="ar-controls">
+                    <button class="ar-control-btn" id="rotateLeft"><i class="fas fa-undo"></i></button>
+                    <button class="ar-control-btn" id="resetView"><i class="fas fa-sync-alt"></i></button>
+                    <button class="ar-control-btn" id="rotateRight"><i class="fas fa-redo"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div class="qr-modal" id="qrModal">
+        <div class="qr-content">
+            <h3>Scan QR Code for Mobile AR</h3>
+            <p>Use your iPhone camera to scan this QR code and view the artwork in AR</p>
+            <div class="qr-code-container" id="qrcode"></div>
+            <p class="qr-instructions">Point your iPhone camera at the QR code above. When prompted, tap "Open in [Browser Name]" to launch the AR experience.</p>
+            <button class="qr-close" id="closeQr">Close</button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white text-center py-4 mt-5">
+        <div class="container">
+            <p>&copy; 2023 Finito911. All rights reserved.</p>
+            <p class="small">Experience art in new dimensions with our AR technology</p>
+        </div>
+    </footer>
+
+    <script>
+        // AR Simulation Functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const arButton = document.getElementById('arButton');
+            const qrButton = document.getElementById('qrButton');
+            const arSimulation = document.getElementById('arSimulation');
+            const qrModal = document.getElementById('qrModal');
+            const closeAr = document.getElementById('closeAr');
+            const closeQr = document.getElementById('closeQr');
+            const arPainting = document.getElementById('arPainting');
+            const resetView = document.getElementById('resetView');
+            const rotateLeft = document.getElementById('rotateLeft');
+            const rotateRight = document.getElementById('rotateRight');
+            
+            let rotation = 0;
+            let scale = 1;
+            let posX = 0;
+            let posY = 0;
+            
+            // Open AR simulation
+            arButton.addEventListener('click', function() {
+                arSimulation.style.display = 'flex';
+                resetPosition();
+            });
+            
+            // Close AR simulation
+            closeAr.addEventListener('click', function() {
+                arSimulation.style.display = 'none';
+            });
+            
+            // Open QR modal
+            qrButton.addEventListener('click', function() {
+                qrModal.style.display = 'flex';
+                
+                // Generate QR code for current page
+                const qrCodeContainer = document.getElementById('qrcode');
+                qrCodeContainer.innerHTML = '';
+                
+                new QRCode(qrCodeContainer, {
+                    text: window.location.href,
+                    width: 200,
+                    height: 200,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            });
+            
+            // Close QR modal
+            closeQr.addEventListener('click', function() {
+                qrModal.style.display = 'none';
+            });
+            
+            // Reset view
+            resetView.addEventListener('click', function() {
+                resetPosition();
+            });
+            
+            // Rotate left
+            rotateLeft.addEventListener('click', function() {
+                rotation -= 15;
+                updateTransform();
+            });
+            
+            // Rotate right
+            rotateRight.addEventListener('click', function() {
+                rotation += 15;
+                updateTransform();
+            });
+            
+            // Reset position function
+            function resetPosition() {
+                rotation = 0;
+                scale = 1;
+                posX = 0;
+                posY = 0;
+                updateTransform();
+            }
+            
+            // Update transform
+            function updateTransform() {
+                arPainting.style.transform = `translate(-50%, -50%) rotate(${rotation}deg) scale(${scale}) translate(${posX}px, ${posY}px)`;
+            }
+            
+            // Touch events for mobile
+            let startX, startY, startScale = 1;
+            
+            arPainting.addEventListener('touchstart', function(e) {
+                if (e.touches.length === 2) {
+                    // Pinch to zoom
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    startScale = Math.sqrt(dx * dx + dy * dy);
+                } else {
+                    // Move painting
+                    startX = e.touches[0].clientX;
+                    startY = e.touches[0].clientY;
+                }
+                e.preventDefault();
+            });
+            
+            arPainting.addEventListener('touchmove', function(e) {
+                if (e.touches.length === 2) {
+                    // Pinch to zoom
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    const currentScale = Math.sqrt(dx * dx + dy * dy);
+                    scale = Math.max(0.5, Math.min(3, startScale / currentScale));
+                    updateTransform();
+                } else if (e.touches.length === 1) {
+                    // Move painting
+                    const moveX = e.touches[0].clientX - startX;
+                    const moveY = e.touches[0].clientY - startY;
+                    posX += moveX / 10;
+                    posY += moveY / 10;
+                    startX = e.touches[0].clientX;
+                    startY = e.touches[0].clientY;
+                    updateTransform();
+                }
+                e.preventDefault();
+            });
+            
+            // Mouse wheel for zoom
+            arPainting.addEventListener('wheel', function(e) {
+                scale += e.deltaY * -0.001;
+                scale = Math.max(0.5, Math.min(3, scale));
+                updateTransform();
+                e.preventDefault();
+            });
+            
+            // Mouse drag for moving
+            let isDragging = false;
+            
+            arPainting.addEventListener('mousedown', function(e) {
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                e.preventDefault();
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (isDragging) {
+                    const moveX = e.clientX - startX;
+                    const moveY = e.clientY - startY;
+                    posX += moveX / 10;
+                    posY += moveY / 10;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    updateTransform();
+                }
+            });
+            
+            document.addEventListener('mouseup', function() {
+                isDragging = false;
+            });
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
