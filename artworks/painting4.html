@@ -3,37 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painting Title - Artist Portfolio</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="../css/style.css" rel="stylesheet">
+    <title>AR Painting Experience</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.min.js"></script>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: Arial, sans-serif;
+        }
+        .arjs-loader { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.9); 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            color: white; 
+            z-index: 1000;
+        }
+        .loader-content {
+            text-align: center;
+            padding: 20px;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            z-index: 100;
+            color: white;
+            background-color: rgba(0,0,0,0.5);
+            padding: 10px;
+            font-size: 14px;
+        }
+    </style>
 </head>
 <body>
-    <!-- Navigation same as above -->
-
-    <section class="py-5">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-8">
-                    <img src="../images/artworks/painting1.jpg" alt="Painting Title" class="img-fluid rounded shadow">
-                    
-                    <!-- AR/Zoom Features -->
-                    <div class="mt-4">
-                        <button class="btn btn-outline-primary me-2">Zoom In</button>
-                        <button class="btn btn-outline-success">AR View</button>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <h2>Painting Title</h2>
-                    <p><strong>Year:</strong> 2024</p>
-                    <p><strong>Medium:</strong> Oil on Canvas</p>
-                    <p><strong>Dimensions:</strong> 24" x 36"</p>
-                    <p><strong>Description:</strong> Detailed description of the artwork...</p>
-                    <p><strong>Inspiration:</strong> What inspired this piece...</p>
-                    
-                    <button class="btn btn-success mt-3">Contact for Purchase</button>
-                </div>
-            </div>
+    <!-- Loader -->
+    <div class="arjs-loader" id="loader">
+        <div class="loader-content">
+            <h2>🎨 Loading AR Experience</h2>
+            <p>Please allow camera access when prompted</p>
+            <p>This may take a moment...</p>
         </div>
-    </section>
+    </div>
+
+    <!-- Info Panel -->
+    <div id="info">🔍 Point your camera at a flat surface to place the painting</div>
+
+    <!-- AR Scene -->
+    <a-scene 
+        vr-mode-ui="enabled: false"
+        arjs='sourceType: webcam; detectionMode: mono; maxDetectionRate: 30;'
+        renderer='antialias: true; alpha: true'
+        loading-screen="enabled: false"
+    >
+        <!-- Marker-based AR (using Hiro marker) -->
+        <a-marker preset="hiro">
+            <a-entity 
+                position="0 0 0" 
+                rotation="-90 0 0"
+                scale="0.5 0.5 0.5"
+            >
+                <!-- Painting -->
+                <a-plane 
+                    position="0 0 0" 
+                    width="4" 
+                    height="3"
+                    material="src: ./images/europeana.jpg; transparent: true;"
+                ></a-plane>
+                
+                <!-- Frame -->
+                <a-box 
+                    position="0 0 0.01" 
+                    width="4.2" 
+                    height="3.2" 
+                    depth="0.1" 
+                    color="#8B4513"
+                ></a-box>
+                
+                <!-- Title -->
+                <a-text 
+                    value="Virtual Art Gallery" 
+                    position="0 -1.8 0.02" 
+                    align="center" 
+                    color="#ffffff" 
+                    width="6"
+                ></a-text>
+            </a-entity>
+        </a-marker>
+
+        <!-- Camera -->
+        <a-entity camera></a-entity>
+    </a-scene>
+
+    <script>
+        // Hide loader when scene loads
+        document.querySelector('a-scene').addEventListener('loaded', function() {
+            setTimeout(() => {
+                document.getElementById('loader').style.display = 'none';
+            }, 2000);
+        });
+
+        // Marker events
+        const marker = document.querySelector('a-marker');
+        const infoPanel = document.getElementById('info');
+        
+        marker.addEventListener('markerFound', function() {
+            infoPanel.innerHTML = '✅ Painting placed! Move the marker to reposition.';
+            infoPanel.style.backgroundColor = 'rgba(0,100,0,0.7)';
+        });
+
+        marker.addEventListener('markerLost', function() {
+            infoPanel.innerHTML = '🔍 Point camera at Hiro marker to place painting';
+            infoPanel.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        });
+    </script>
 </body>
 </html>
