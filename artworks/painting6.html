@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AR Paint Preview</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+</head>
+<body>
+    <a-scene>
+        <!-- Camera and AR setup -->
+        <a-entity camera="active: true" look-controls></a-entity>
+        
+        <!-- Virtual wall that can be "painted" -->
+        <a-box id="wall" position="0 1.5 -5" width="4" height="3" depth="0.1" 
+               color="#ffffff" material="shader: flat"></a-box>
+        
+        <!-- UI Controls -->
+        <div style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;">
+            <button onclick="changeColor('#ff0000')">Red</button>
+            <button onclick="changeColor('#00ff00')">Green</button>
+            <button onclick="changeColor('#0000ff')">Blue</button>
+        </div>
+    </a-scene>
+
+    <script>
+        function changeColor(color) {
+            document.getElementById('wall').setAttribute('color', color);
+        }
+    </script>
+</body>
+</html>

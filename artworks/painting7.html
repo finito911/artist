@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Paint AR</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.1.0"></script>
+</head>
+<body>
+    <video id="video" autoplay playsinline style="display:none;"></video>
+    <canvas id="canvas" width="640" height="480"></canvas>
+    
+    <script>
+        async function init() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Get camera stream
+            const stream = await navigator.mediaDevices.getUserMedia({video: true});
+            video.srcObject = stream;
+            
+            // Load COCO-SSD model for object detection
+            const model = await cocoSsd.load();
+            
+            video.addEventListener('loadeddata', () => {
+                setInterval(async () => {
+                    // Detect objects
+                    const predictions = await model.detect(video);
+                    
+                    // Draw video frame
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    // Highlight detected walls/objects and apply virtual paint
+                    predictions.forEach(prediction => {
+                        if (prediction.class === 'wall' || prediction.class === 'person') {
+                            // Apply virtual paint effect
+                            ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+                            ctx.fillRect(
+                                prediction.bbox[0],
+                                prediction.bbox[1],
+                                prediction.bbox[2],
+                                prediction.bbox[3]
+                            );
+                        }
+                    });
+                }, 100);
+            });
+        }
+        
+        init();
+    </script>
+</body>
+</html>
