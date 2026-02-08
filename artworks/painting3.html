@@ -66,6 +66,7 @@
             display: none;
             border-radius: 10px;
             margin-top: 20px;
+            background: #f0f0f0;
         }
         
         /* Zoom Modal Styles */
@@ -114,6 +115,7 @@
             background-color: white;
             border-radius: 10px;
             display: none;
+            border: 2px dashed #007AFF;
         }
         
         .qr-code {
@@ -126,6 +128,12 @@
             font-size: 0.9rem;
             color: #666;
             margin-top: 10px;
+        }
+        
+        .loading-indicator {
+            text-align: center;
+            padding: 20px;
+            color: #666;
         }
         
         @media (max-width: 768px) {
@@ -162,7 +170,11 @@
                         environment-image="neutral"
                         shadow-intensity="1"
                         exposure="0.5"
-                        shadow-softness="1">
+                        shadow-softness="1"
+                        loading="lazy">
+                        <div class="loading-indicator" slot="progress-bar">
+                            Loading 3D model...
+                        </div>
                     </model-viewer>
                     
                     <!-- AR/Zoom Features -->
@@ -182,8 +194,12 @@
                         <h5>Scan QR Code for AR Experience</h5>
                         <div id="qrcode" class="qr-code"></div>
                         <p class="qr-instructions">
-                            Scan this QR code with your iPhone/iPad camera to view this artwork in AR
+                            Scan this QR code with your iPhone/iPad camera to view this artwork in AR.<br>
+                            <small>(Open camera app and point at QR code)</small>
                         </p>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="generateNewQRCode()">
+                            Regenerate QR Code
+                        </button>
                     </div>
                     
                     <!-- AR Information Section -->
@@ -244,17 +260,29 @@
             
             // Generate QR Code for current page
             function generateQRCode() {
+                // Clean up existing QR code
                 if (qrCode) {
-                    qrCode.clear();
+                    document.getElementById("qrcode").innerHTML = "";
                 }
-                qrCode = new QRCode(document.getElementById("qrcode"), {
-                    text: window.location.href,
-                    width: 200,
-                    height: 200,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
-                });
+                
+                try {
+                    qrCode = new QRCode(document.getElementById("qrcode"), {
+                        text: window.location.href,
+                        width: 200,
+                        height: 200,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                    console.log("QR Code generated successfully");
+                } catch (error) {
+                    console.error("Error generating QR code:", error);
+                }
+            }
+            
+            // Regenerate QR code (in case of issues)
+            function generateNewQRCode() {
+                generateQRCode();
             }
             
             // Initialize AR compatibility info
@@ -268,7 +296,7 @@
                     arButton.disabled = true;
                     // Show QR code container
                     qrContainer.style.display = 'block';
-                    generateQRCode();
+                    setTimeout(generateQRCode, 100); // Delay to ensure DOM is ready
                 }
             }
             
@@ -326,7 +354,7 @@
             // Error handling for model viewer
             arModelViewer.addEventListener('error', function(event) {
                 console.error('AR Model failed to load:', event.detail);
-                alert('Failed to load 3D model. Please check if the .glb file exists.');
+                compatibilityInfo.innerHTML += '<div class="alert alert-danger"><small>Error loading 3D model. Please contact the artist.</small></div>';
             });
             
             // Progress indicator for model loading
@@ -338,8 +366,13 @@
                 }
             });
             
-            // Initialize
+            // Initialize everything
             initARCompatibility();
+            
+            // Add model loaded event listener
+            arModelViewer.addEventListener('load', function() {
+                console.log('3D model loaded successfully');
+            });
         });
     </script>
 </body>
