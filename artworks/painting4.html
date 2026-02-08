@@ -2,126 +2,242 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>AR Painting Experience</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.min.js"></script>
     <style>
-        body { 
-            margin: 0; 
-            overflow: hidden; 
-            font-family: Arial, sans-serif;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .arjs-loader { 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            background: rgba(0,0,0,0.9); 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center; 
-            color: white; 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        .arjs-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             z-index: 1000;
-        }
-        .loader-content {
             text-align: center;
             padding: 20px;
         }
-        #info {
+        .loader-content h1 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .loader-content p {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+        .instructions {
             position: absolute;
-            top: 10px;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            border-radius: 12px;
+            padding: 15px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .instructions h3 {
+            margin-bottom: 8px;
+            color: #fff;
+        }
+        .instructions ol {
+            padding-left: 20px;
+            margin: 10px 0;
+        }
+        .instructions li {
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        .warning {
+            background: rgba(255, 100, 100, 0.2);
+            border: 1px solid rgba(255, 100, 100, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 15px;
+            font-size: 0.8rem;
+        }
+        #ar-scene {
             width: 100%;
-            text-align: center;
-            z-index: 100;
-            color: white;
-            background-color: rgba(0,0,0,0.5);
-            padding: 10px;
-            font-size: 14px;
+            height: 100%;
+        }
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
 <body>
-    <!-- Loader -->
-    <div class="arjs-loader" id="loader">
+    <!-- Loader Screen -->
+    <div class="arjs-loader" id="loadingScreen">
         <div class="loader-content">
-            <h2>🎨 Loading AR Experience</h2>
+            <h1>🎨 AR Painting Experience</h1>
+            <p>Loading augmented reality experience...</p>
             <p>Please allow camera access when prompted</p>
-            <p>This may take a moment...</p>
+            <div class="warning">
+                <strong>iPhone Users:</strong> If camera doesn't start,<br>
+                please refresh and ensure Safari has camera permissions
+            </div>
         </div>
     </div>
 
-    <!-- Info Panel -->
-    <div id="info">🔍 Point your camera at a flat surface to place the painting</div>
-
-    <!-- AR Scene -->
-    <a-scene 
-        vr-mode-ui="enabled: false"
-        arjs='sourceType: webcam; detectionMode: mono; maxDetectionRate: 30;'
-        renderer='antialias: true; alpha: true'
-        loading-screen="enabled: false"
-    >
-        <!-- Marker-based AR (using Hiro marker) -->
-        <a-marker preset="hiro">
-            <a-entity 
-                position="0 0 0" 
-                rotation="-90 0 0"
-                scale="0.5 0.5 0.5"
-            >
-                <!-- Painting -->
+    <!-- AR Scene Container -->
+    <div class="container">
+        <a-scene 
+            id="ar-scene"
+            vr-mode-ui="enabled: false"
+            arjs='sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3;'
+            renderer='antialias: true; alpha: true; logarithmicDepthBuffer: true;'
+            loading-screen="enabled: false"
+            arjs-webcam-texture='facingMode: environment;'
+        >
+            <!-- Surface-based placement -->
+            <a-entity ar-raycaster raycaster="objects: .interactable"></a-entity>
+            
+            <!-- Default placement (will be replaced by surface detection) -->
+            <a-entity id="painting-container">
                 <a-plane 
-                    position="0 0 0" 
-                    width="4" 
-                    height="3"
-                    material="src: ./images/europeana.jpg; transparent: true;"
+                    position="0 0 -5" 
+                    width="3" 
+                    height="2"
+                    material="src: #painting-texture; transparent: true; shader: flat"
+                    rotation="-90 0 0"
                 ></a-plane>
-                
-                <!-- Frame -->
                 <a-box 
-                    position="0 0 0.01" 
-                    width="4.2" 
-                    height="3.2" 
+                    position="0 0 -4.99" 
+                    width="3.2" 
+                    height="2.2" 
                     depth="0.1" 
                     color="#8B4513"
+                    rotation="-90 0 0"
                 ></a-box>
-                
-                <!-- Title -->
-                <a-text 
-                    value="Virtual Art Gallery" 
-                    position="0 -1.8 0.02" 
-                    align="center" 
-                    color="#ffffff" 
-                    width="6"
-                ></a-text>
             </a-entity>
-        </a-marker>
 
-        <!-- Camera -->
-        <a-entity camera></a-entity>
-    </a-scene>
+            <a-camera></a-camera>
+        </a-scene>
+
+        <!-- Instructions -->
+        <div class="instructions">
+            <h3>How to Use:</h3>
+            <ol>
+                <li>Allow camera access when prompted</li>
+                <li>Point camera at a flat wall or surface</li>
+                <li>The painting will automatically appear</li>
+                <li>Move your phone to view from different angles</li>
+            </ol>
+            <div class="warning">
+                <strong>Note:</strong> Works best in well-lit environments with clear, flat surfaces
+            </div>
+        </div>
+    </div>
+
+    <!-- Painting Texture -->
+    <img id="painting-texture" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg" style="display:none;" crossorigin="anonymous">
 
     <script>
-        // Hide loader when scene loads
-        document.querySelector('a-scene').addEventListener('loaded', function() {
-            setTimeout(() => {
-                document.getElementById('loader').style.display = 'none';
-            }, 2000);
+        // Handle iOS specific requirements
+        function handleiOS() {
+            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                // Force HTTPS for iOS
+                if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+                    location.href = 'https:' + window.location.href.substring(window.location.protocol.length);
+                    return;
+                }
+                
+                // Add iOS specific instructions
+                const warningDiv = document.createElement('div');
+                warningDiv.className = 'warning';
+                warningDiv.innerHTML = '<strong>iOS Tip:</strong> If experiencing issues, try:<br>- Closing other apps<br>- Reloading the page<br>- Checking Safari camera permissions';
+                document.querySelector('.instructions').appendChild(warningDiv);
+            }
+        }
+
+        // Initialize AR experience
+        function initARExperience() {
+            const scene = document.querySelector('a-scene');
+            const loadingScreen = document.getElementById('loadingScreen');
+
+            // Hide loader once scene is ready
+            scene.addEventListener('loaded', function() {
+                setTimeout(() => {
+                    loadingScreen.classList.add('hidden');
+                }, 3000);
+            });
+
+            // Handle camera permission errors
+            scene.addEventListener('arjs-error', function(event) {
+                if (event.detail.error === 'NotAllowedError') {
+                    loadingScreen.innerHTML = `
+                        <div class="loader-content">
+                            <h1>⚠️ Camera Access Denied</h1>
+                            <p>Please enable camera permissions:</p>
+                            <p>Settings > Safari > Camera > Allow</p>
+                            <p>Then refresh this page</p>
+                            <button onclick="location.reload()" style="
+                                margin-top: 20px;
+                                padding: 12px 24px;
+                                background: #007AFF;
+                                color: white;
+                                border: none;
+                                border-radius: 8px;
+                                font-size: 1rem;
+                                cursor: pointer;
+                            ">Refresh Page</button>
+                        </div>
+                    `;
+                }
+            });
+
+            // Add touch support for better interaction
+            document.addEventListener('touchstart', function(e) {
+                if (e.touches.length > 1) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+        }
+
+        // Start everything
+        document.addEventListener('DOMContentLoaded', function() {
+            handleiOS();
+            initARExperience();
         });
 
-        // Marker events
-        const marker = document.querySelector('a-marker');
-        const infoPanel = document.getElementById('info');
-        
-        marker.addEventListener('markerFound', function() {
-            infoPanel.innerHTML = '✅ Painting placed! Move the marker to reposition.';
-            infoPanel.style.backgroundColor = 'rgba(0,100,0,0.7)';
-        });
-
-        marker.addEventListener('markerLost', function() {
-            infoPanel.innerHTML = '🔍 Point camera at Hiro marker to place painting';
-            infoPanel.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        // Handle page visibility changes (when switching apps)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                // Page became visible again
+                const scene = document.querySelector('a-scene');
+                if (scene && scene.is('ar-mode')) {
+                    // Restart camera if needed
+                    setTimeout(() => {
+                        scene.removeAttribute('arjs');
+                        scene.setAttribute('arjs', 'sourceType: webcam; detectionMode: mono;');
+                    }, 100);
+                }
+            }
         });
     </script>
 </body>
