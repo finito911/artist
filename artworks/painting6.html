@@ -1,27 +1,315 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Simple AR Camera</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Paint Preview - Back Camera</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        #video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #overlayCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 25px;
+            display: flex;
+            gap: 10px;
+            backdrop-filter: blur(10px);
+        }
+        .image-btn {
+            width: 60px;
+            height: 60px;
+            border: 3px solid white;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            background-size: cover;
+            background-position: center;
+        }
+        .status {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .init-btn {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2000;
+            padding: 20px 40px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+    </style>
 </head>
-<body style="margin:0; padding:0; background:#000;">
-    <video id="video" autoplay playsinline muted style="width:100vw; height:100vh; object-fit:cover;"></video>
-    <button onclick="startCamera()" style="position:fixed; top:20px; left:20px; z-index:1000; padding:15px;">Start Back Camera</button>
+<body>
+    <div id="container">
+        <video id="video" autoplay playsinline muted style="display: none;"></video>
+        <canvas id="overlayCanvas"></canvas>
+    </div>
     
+    <button class="init-btn" onclick="initCamera()">Start AR Camera</button>
+    
+    <div class="status" id="status">
+        Ready to start
+    </div>
+    
+    <div class="controls" style="display: none;" id="controlsDiv">
+        <!-- Replace these with your actual paint sample images -->
+        <div class="image-btn" style="background-image: url('https://i.imgur.com/sample1.jpg');" onclick="setPaintImage('https://i.imgur.com/sample1.jpg')" title="Paint Sample 1"></div>
+        <div class="image-btn" style="background-image: url('https://i.imgur.com/sample2.jpg');" onclick="setPaintImage('https://i.imgur.com/sample2.jpg')" title="Paint Sample 2"></div>
+        <div class="image-btn" style="background-image: url('https://i.imgur.com/sample3.jpg');" onclick="setPaintImage('https://i.imgur.com/sample3.jpg')" title="Paint Sample 3"></div>
+        <div class="image-btn" style="background-image: url('https://i.imgur.com/clear.png');" onclick="setPaintImage(null)" title="Clear">❌</div>
+    </div>
+
     <script>
-        async function startCamera() {
+        let video = document.getElementById('video');
+        let canvas = document.getElementById('overlayCanvas');
+        let ctx = canvas.getContext('2d');
+        let currentStream = null;
+        let paintImage = null;
+        let paintImageElement = null;
+        let isInitialized = false;
+        let imageCache = {};
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        // Preload common paint sample images
+        function preloadImages() {
+            const imageUrls = [
+                'https://i.imgur.com/sample1.jpg',
+                'https://i.imgur.com/sample2.jpg', 
+                'https://i.imgur.com/sample3.jpg'
+            ];
+            
+            imageUrls.forEach(url => {
+                if (!imageCache[url]) {
+                    const img = new Image();
+                    img.crossOrigin = 'Anonymous';
+                    img.src = url;
+                    img.onload = () => {
+                        imageCache[url] = img;
+                        console.log('Preloaded:', url);
+                    };
+                }
+            });
+        }
+
+        async function initCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({
+                updateStatus('Accessing camera...');
+                
+                // Request back camera specifically
+                const constraints = {
                     video: {
-                        facingMode: 'environment' // BACK CAMERA
-                    }
-                });
-                document.getElementById('video').srcObject = stream;
-            } catch (err) {
-                console.error('Error:', err);
-                alert('Could not access back camera. Make sure you are on a mobile device and have granted permissions.');
+                        facingMode: 'environment', // This is BACK CAMERA
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    },
+                    audio: false
+                };
+
+                // Get the stream
+                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = currentStream;
+                
+                // Show video element
+                video.style.display = 'block';
+                
+                // Hide start button
+                document.querySelector('.init-btn').style.display = 'none';
+                
+                // Show controls
+                document.getElementById('controlsDiv').style.display = 'flex';
+                
+                // Set canvas dimensions
+                video.onloadedmetadata = function() {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    updateStatus('Camera ready - Back camera active');
+                    isInitialized = true;
+                    startProcessing();
+                };
+
+                video.onerror = function() {
+                    updateStatus('Error: Could not load video stream');
+                };
+
+            } catch (error) {
+                console.error('Camera error:', error);
+                updateStatus('Error: ' + error.message || 'Could not access camera');
+                
+                // Try fallback to any available camera
+                if (error.name === 'NotAllowedError') {
+                    updateStatus('Please allow camera access and refresh the page');
+                } else if (error.name === 'NotFoundError') {
+                    updateStatus('No back camera found. Trying front camera...');
+                    tryFrontCamera();
+                }
             }
         }
+
+        async function tryFrontCamera() {
+            try {
+                const constraints = {
+                    video: {
+                        facingMode: 'user', // Front camera fallback
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                };
+
+                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = currentStream;
+                video.style.display = 'block';
+                document.querySelector('.init-btn').style.display = 'none';
+                document.getElementById('controlsDiv').style.display = 'flex';
+                
+                video.onloadedmetadata = function() {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    updateStatus('Using front camera');
+                    isInitialized = true;
+                    startProcessing();
+                };
+                
+            } catch (error) {
+                updateStatus('Could not access any camera');
+            }
+        }
+
+        function setPaintImage(imageUrl) {
+            if (!imageUrl) {
+                paintImage = null;
+                paintImageElement = null;
+                updateStatus('Cleared paint overlay');
+                return;
+            }
+            
+            // Check if image is already cached
+            if (imageCache[imageUrl]) {
+                paintImage = imageUrl;
+                paintImageElement = imageCache[imageUrl];
+                updateStatus('Using cached image: ' + imageUrl);
+                return;
+            }
+            
+            // Load new image
+            updateStatus('Loading image...');
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.src = imageUrl;
+            
+            img.onload = function() {
+                paintImage = imageUrl;
+                paintImageElement = img;
+                imageCache[imageUrl] = img; // Cache for future use
+                updateStatus('Image loaded: ' + imageUrl);
+            };
+            
+            img.onerror = function() {
+                updateStatus('Failed to load image: ' + imageUrl);
+            };
+        }
+
+        function startProcessing() {
+            if (!isInitialized || video.paused || video.ended) {
+                setTimeout(startProcessing, 100);
+                return;
+            }
+            
+            try {
+                // Draw video frame
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                // Overlay paint image if selected
+                if (paintImage && paintImageElement) {
+                    // Define where to place the paint image (center of screen)
+                    const imageWidth = canvas.width * 0.8; // 80% of screen width
+                    const imageHeight = canvas.height * 0.6; // 60% of screen height
+                    const imageX = (canvas.width - imageWidth) / 2;
+                    const imageY = (canvas.height - imageHeight) / 2;
+                    
+                    // Draw the paint image with transparency
+                    ctx.globalAlpha = 0.7; // 70% opacity
+                    ctx.drawImage(
+                        paintImageElement, 
+                        imageX, 
+                        imageY, 
+                        imageWidth, 
+                        imageHeight
+                    );
+                    ctx.globalAlpha = 1.0;
+                }
+                
+            } catch (error) {
+                console.error('Processing error:', error);
+            }
+            
+            requestAnimationFrame(startProcessing);
+        }
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden && currentStream) {
+                updateStatus('Paused - tab not visible');
+            } else if (!document.hidden && isInitialized) {
+                updateStatus('Resumed');
+            }
+        });
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        // Initialize image preloading
+        window.addEventListener('load', preloadImages);
     </script>
 </body>
 </html>
