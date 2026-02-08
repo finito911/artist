@@ -7,6 +7,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="../css/style.css" rel="stylesheet">
     
+    <!-- QR Code Generator -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
     <!-- Model Viewer for AR functionality -->
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <script nomodule src="https://unpkg.com/@google/model-viewer/dist/model-viewer-legacy.js"></script>
@@ -28,6 +31,7 @@
             font-weight: 600;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3);
+            margin-right: 10px;
         }
         
         .ar-button:hover:not(:disabled) {
@@ -44,14 +48,6 @@
             font-size: 0.9rem;
             color: #666;
             margin-top: 10px;
-        }
-        
-        .compatibility-message {
-            background-color: #e7f3ff;
-            border-left: 4px solid #007AFF;
-            padding: 15px;
-            border-radius: 0 8px 8px 0;
-            margin: 15px 0;
         }
         
         .feature-badge {
@@ -72,9 +68,74 @@
             margin-top: 20px;
         }
         
+        /* Zoom Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+        }
+        
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 90%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1001;
+        }
+        
+        .close:hover {
+            color: #ccc;
+        }
+        
+        /* QR Code Container */
+        .qr-container {
+            text-align: center;
+            margin-top: 15px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .qr-code {
+            margin: 10px auto;
+            width: 200px;
+            height: 200px;
+        }
+        
+        .qr-instructions {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 10px;
+        }
+        
         @media (max-width: 768px) {
             model-viewer {
                 height: 300px;
+            }
+            
+            .qr-code {
+                width: 150px;
+                height: 150px;
             }
         }
     </style>
@@ -94,7 +155,7 @@
                     <!-- AR Model Viewer (hidden by default) -->
                     <model-viewer 
                         id="ar-model-viewer"
-                        src="../models/dan.gltf"
+                        src="../models/dan.glb"
                         ar 
                         ar-modes="scene-viewer webxr quick-look"
                         camera-controls 
@@ -106,14 +167,23 @@
                     
                     <!-- AR/Zoom Features -->
                     <div class="mt-4">
-                        <button class="btn btn-outline-primary me-2" onclick="zoomImage()">
-                            Zoom In
+                        <button class="btn btn-outline-primary me-2" onclick="openZoomModal()">
+                            🔍 Zoom In
                         </button>
                         
                         <button id="ar-button" class="ar-button" onclick="toggleAR()">
                             <span id="ar-button-text">View in Augmented Reality</span>
                             <span class="feature-badge">AR</span>
                         </button>
+                    </div>
+                    
+                    <!-- QR Code Container (shown when AR not supported) -->
+                    <div id="qr-container" class="qr-container">
+                        <h5>Scan QR Code for AR Experience</h5>
+                        <div id="qrcode" class="qr-code"></div>
+                        <p class="qr-instructions">
+                            Scan this QR code with your iPhone/iPad camera to view this artwork in AR
+                        </p>
                     </div>
                     
                     <!-- AR Information Section -->
@@ -141,6 +211,12 @@
         </div>
     </section>
 
+    <!-- Zoom Modal -->
+    <div id="zoomModal" class="modal">
+        <span class="close" onclick="closeZoomModal()">&times;</span>
+        <img class="modal-content" id="zoomedImage">
+    </div>
+
     <script>
         // AR functionality
         document.addEventListener('DOMContentLoaded', function() {
@@ -150,8 +226,12 @@
             const mainImage = document.getElementById('main-image');
             const arModelViewer = document.getElementById('ar-model-viewer');
             const compatibilityInfo = document.getElementById('compatibility-info');
+            const qrContainer = document.getElementById('qr-container');
+            const zoomModal = document.getElementById('zoomModal');
+            const zoomedImage = document.getElementById('zoomedImage');
             
             let arActive = false;
+            let qrCode = null;
             
             // Check if device supports AR
             function checkARSupport() {
@@ -162,13 +242,33 @@
                 return isIOS && (isSafari || isChromeIOS);
             }
             
+            // Generate QR Code for current page
+            function generateQRCode() {
+                if (qrCode) {
+                    qrCode.clear();
+                }
+                qrCode = new QRCode(document.getElementById("qrcode"), {
+                    text: window.location.href,
+                    width: 200,
+                    height: 200,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            }
+            
             // Initialize AR compatibility info
             function initARCompatibility() {
                 if (checkARSupport()) {
                     compatibilityInfo.innerHTML = '<div class="alert alert-success"><small>Your device supports AR! Click the button above to view the artwork in your space.</small></div>';
+                    // Hide QR code container since AR is supported
+                    qrContainer.style.display = 'none';
                 } else {
-                    compatibilityInfo.innerHTML = '<div class="alert alert-warning"><small>AR feature requires Apple device with Safari or Chrome. You can still enjoy the artwork through zoom functionality.</small></div>';
+                    compatibilityInfo.innerHTML = '<div class="alert alert-warning"><small>AR feature requires Apple device with Safari or Chrome. Scan the QR code below to try it on a compatible device.</small></div>';
                     arButton.disabled = true;
+                    // Show QR code container
+                    qrContainer.style.display = 'block';
+                    generateQRCode();
                 }
             }
             
@@ -198,11 +298,30 @@
             }
             
             // Zoom functionality
-            function zoomImage() {
-                // Simple zoom implementation - you can enhance this
-                const currentSrc = mainImage.src;
-                alert('Zoom functionality would open a larger view of the artwork. This could be implemented with a modal or lightbox.');
+            function openZoomModal() {
+                zoomedImage.src = mainImage.src;
+                zoomModal.style.display = "block";
+                document.body.style.overflow = "hidden"; // Prevent background scrolling
             }
+            
+            function closeZoomModal() {
+                zoomModal.style.display = "none";
+                document.body.style.overflow = "auto"; // Restore scrolling
+            }
+            
+            // Close modal when clicking outside
+            window.onclick = function(event) {
+                if (event.target === zoomModal) {
+                    closeZoomModal();
+                }
+            }
+            
+            // Close modal with Escape key
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape' && zoomModal.style.display === 'block') {
+                    closeZoomModal();
+                }
+            });
             
             // Error handling for model viewer
             arModelViewer.addEventListener('error', function(event) {
