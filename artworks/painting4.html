@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>AR Painting Experience</title>
+    <title>AR Wall Painting</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.min.js"></script>
     <style>
@@ -19,11 +19,6 @@
             height: 100vh;
             overflow: hidden;
             touch-action: none;
-        }
-        .container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
         }
         .arjs-loader {
             position: fixed;
@@ -52,7 +47,7 @@
         }
         .instructions {
             position: absolute;
-            bottom: 20px;
+            top: 20px;
             left: 20px;
             right: 20px;
             background: rgba(0,0,0,0.7);
@@ -63,25 +58,17 @@
             border: 1px solid rgba(255,255,255,0.1);
             z-index: 100;
         }
-        .instructions h3 {
-            margin-bottom: 8px;
-            color: #4dabf7;
-        }
-        .instructions ol {
-            padding-left: 20px;
-            margin: 10px 0;
-        }
-        .instructions li {
-            margin-bottom: 8px;
-            line-height: 1.4;
-        }
-        .warning {
-            background: rgba(255, 100, 100, 0.2);
-            border: 1px solid rgba(255, 100, 100, 0.3);
-            border-radius: 8px;
+        .status-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            border-radius: 12px;
             padding: 12px;
-            margin-top: 15px;
             font-size: 0.8rem;
+            text-align: center;
+            z-index: 100;
         }
         #ar-scene {
             width: 100%;
@@ -90,31 +77,14 @@
         .hidden {
             display: none !important;
         }
-        .tap-to-place {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-            z-index: 200;
-            backdrop-filter: blur(10px);
-            border: 2px solid #4dabf7;
-        }
-        .tap-to-place.hidden {
-            display: none;
-        }
     </style>
 </head>
 <body>
     <!-- Loader Screen -->
     <div class="arjs-loader" id="loadingScreen">
         <div class="loader-content">
-            <h1>🎨 AR Painting Experience</h1>
-            <p>Loading augmented reality...</p>
+            <h1>🖼️ AR Wall Painting</h1>
+            <p>Starting camera...</p>
             <p>Please allow camera access when prompted</p>
             <div style="margin-top: 30px;">
                 <div style="width: 40px; height: 40px; border: 4px solid #4dabf7; border-top: 4px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
@@ -122,180 +92,160 @@
         </div>
     </div>
 
-    <!-- Tap to Place Hint -->
-    <div class="tap-to-place" id="tapHint">
-        <h3>👆 Tap to Place Painting</h3>
-        <p>Tap on any surface to place your artwork</p>
+    <!-- AR Scene -->
+    <a-scene 
+        id="ar-scene"
+        vr-mode-ui="enabled: false"
+        arjs='sourceType: webcam; detectionMode: mono; maxDetectionRate: 60;'
+        renderer='antialias: true; alpha: true;'
+        loading-screen="enabled: false"
+    >
+        <!-- Hit testing for surface placement -->
+        <a-entity id="hit-testing">
+            <!-- This will be populated with detected surfaces -->
+        </a-entity>
+
+        <!-- Camera -->
+        <a-entity camera="active: true"></a-entity>
+        
+        <!-- Lighting -->
+        <a-light type="ambient" color="#BBB" intensity="0.5"></a-light>
+        <a-light type="directional" color="#FFF" intensity="0.5" position="-1 1 1"></a-light>
+    </a-scene>
+
+    <!-- Instructions -->
+    <div class="instructions">
+        <h3>🎯 How to Use:</h3>
+        <ul style="list-style: none; padding: 0; margin: 10px 0;">
+            <li>• Point camera at a flat wall or surface</li>
+            <li>• Tap screen to place painting</li>
+            <li>• Move phone to adjust position</li>
+        </ul>
     </div>
 
-    <!-- AR Scene Container -->
-    <div class="container">
-        <a-scene 
-            id="ar-scene"
-            vr-mode-ui="enabled: false"
-            arjs='sourceType: webcam; detectionMode: mono; maxDetectionRate: 60;'
-            renderer='antialias: true; alpha: true; logarithmicDepthBuffer: true;'
-            loading-screen="enabled: false"
-        >
-            <!-- Camera with proper settings -->
-            <a-entity 
-                id="ar-camera" 
-                camera="active: true" 
-                position="0 0 0" 
-                rotation="0 0 0"
-                wasd-controls="enabled: false"
-                look-controls="enabled: false"
-            ></a-entity>
-
-            <!-- Lighting -->
-            <a-light type="ambient" color="#BBB" intensity="0.5"></a-light>
-            <a-light type="directional" color="#FFF" intensity="0.5" position="-1 1 1"></a-light>
-
-            <!-- Root entity for paintings -->
-            <a-entity id="paintings-root"></a-entity>
-        </a-scene>
-
-        <!-- Instructions -->
-        <div class="instructions">
-            <h3>How to Use:</h3>
-            <ol>
-                <li>Allow camera access when prompted</li>
-                <li>Point camera at a flat wall or surface</li>
-                <li>Tap screen to place the painting</li>
-                <li>Walk around to view from different angles</li>
-            </ol>
-        </div>
+    <!-- Status Bar -->
+    <div class="status-bar" id="statusBar">
+        🔍 Scanning for surfaces...
     </div>
 
     <script>
         // Global variables
-        let sceneLoaded = false;
-        let cameraActive = false;
+        let sceneReady = false;
+        let paintingPlaced = false;
 
-        // Handle iOS specific requirements
-        function handleiOS() {
-            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                // Prevent zoom on double tap
-                document.addEventListener('touchmove', function(e) {
-                    if (e.scale !== 1) {
-                        e.preventDefault();
-                    }
-                }, { passive: false });
-            }
-        }
-
-        // Initialize AR experience
-        function initARExperience() {
+        // Initialize when DOM loads
+        document.addEventListener('DOMContentLoaded', function() {
             const scene = document.querySelector('a-scene');
             const loadingScreen = document.getElementById('loadingScreen');
-            const tapHint = document.getElementById('tapHint');
+            const statusBar = document.getElementById('statusBar');
 
-            // Scene loaded event
+            // Scene loaded
             scene.addEventListener('loaded', function() {
                 console.log('Scene loaded');
-                sceneLoaded = true;
+                sceneReady = true;
                 
-                // Hide loader after delay to ensure camera starts
+                // Hide loading screen after delay
                 setTimeout(() => {
                     loadingScreen.classList.add('hidden');
-                    
-                    // Show tap hint
-                    setTimeout(() => {
-                        tapHint.classList.remove('hidden');
-                    }, 1000);
-                }, 3000);
+                }, 2000);
             });
 
-            // Camera stream started
+            // Camera started
             scene.addEventListener('arjs-stream-started', function() {
-                console.log('Camera stream started');
-                cameraActive = true;
+                console.log('Camera started');
+                statusBar.innerHTML = '✅ Camera active - point at a wall!';
             });
 
-            // Handle camera permission errors
+            // Camera error
             scene.addEventListener('arjs-error', function(event) {
                 console.error('AR.js error:', event.detail);
-                if (event.detail.error && event.detail.error.name === 'NotAllowedError') {
-                    showCameraPermissionError();
-                }
+                statusBar.innerHTML = '❌ Camera error - check permissions';
+                showCameraError();
             });
 
-            // Handle taps to place paintings
+            // Touch/click to place painting
             scene.addEventListener('click', function(event) {
-                if (tapHint.classList.contains('hidden')) return;
-                
-                placePaintingAtCursor();
-                tapHint.classList.add('hidden');
+                if (paintingPlaced) return;
+                placePainting();
             });
 
-            // Handle touch events for mobile
             scene.addEventListener('touchstart', function(event) {
-                if (tapHint.classList.contains('hidden')) return;
-                if (event.touches.length === 1) {
-                    placePaintingAtCursor();
-                    tapHint.classList.add('hidden');
-                }
+                if (paintingPlaced || event.touches.length > 1) return;
+                placePainting();
             });
-        }
 
-        // Place painting at cursor/tap position
-        function placePaintingAtCursor() {
+            // Handle iOS specific behavior
+            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                // Prevent zoom
+                document.addEventListener('gesturestart', function(e) {
+                    e.preventDefault();
+                });
+            }
+        });
+
+        // Place painting function
+        function placePainting() {
+            if (paintingPlaced) return;
+            
             const scene = document.querySelector('a-scene');
-            const paintingsRoot = document.getElementById('paintings-root');
+            paintingPlaced = true;
             
-            // Create painting entity
-            const paintingEntity = document.createElement('a-entity');
-            
-            // Position in front of camera
-            paintingEntity.setAttribute('position', '0 0 -3');
-            paintingEntity.setAttribute('rotation', '-90 0 0');
-            paintingEntity.setAttribute('scale', '0.8 0.8 0.8');
+            // Create painting entity at camera position
+            const painting = document.createElement('a-entity');
+            painting.setAttribute('position', '0 0 -3'); // 3 meters in front
+            painting.setAttribute('rotation', '0 0 0');
+            painting.setAttribute('scale', '1 1 1');
             
             // Add painting plane
-            const paintingPlane = document.createElement('a-plane');
-            paintingPlane.setAttribute('width', '2.5');
-            paintingPlane.setAttribute('height', '1.8'); // Adjust aspect ratio
-            paintingPlane.setAttribute('material', {
+            const plane = document.createElement('a-plane');
+            plane.setAttribute('width', '2.5');
+            plane.setAttribute('height', '1.8');
+            plane.setAttribute('material', {
                 src: '#painting-texture',
                 transparent: true,
                 shader: 'flat'
             });
             
             // Add frame
-            const frameBox = document.createElement('a-box');
-            frameBox.setAttribute('width', '2.7');
-            frameBox.setAttribute('height', '2');
-            frameBox.setAttribute('depth', '0.1');
-            frameBox.setAttribute('color', '#8B4513');
-            frameBox.setAttribute('position', '0 0 0.05');
+            const frame = document.createElement('a-box');
+            frame.setAttribute('width', '2.7');
+            frame.setAttribute('height', '2');
+            frame.setAttribute('depth', '0.1');
+            frame.setAttribute('color', '#8B4513');
+            frame.setAttribute('position', '0 0 0.05');
             
             // Add title
-            const titleText = document.createElement('a-text');
-            titleText.setAttribute('value', 'Virtual Artwork');
-            titleText.setAttribute('position', '0 -1.2 0.06');
-            titleText.setAttribute('align', 'center');
-            titleText.setAttribute('color', '#ffffff');
-            titleText.setAttribute('width', '4');
+            const title = document.createElement('a-text');
+            title.setAttribute('value', 'Your Artwork');
+            title.setAttribute('position', '0 -1.2 0.06');
+            title.setAttribute('align', 'center');
+            title.setAttribute('color', '#ffffff');
+            title.setAttribute('width', '4');
             
-            // Build the painting
-            paintingEntity.appendChild(paintingPlane);
-            paintingEntity.appendChild(frameBox);
-            paintingEntity.appendChild(titleText);
+            // Build painting
+            painting.appendChild(plane);
+            painting.appendChild(frame);
+            painting.appendChild(title);
             
             // Add to scene
-            paintingsRoot.appendChild(paintingEntity);
+            scene.appendChild(painting);
             
-            console.log('Painting placed!');
+            // Update status
+            document.getElementById('statusBar').innerHTML = '🎨 Painting placed! Move around to view.';
+            
+            console.log('Painting placed successfully');
         }
 
-        // Show camera permission error
-        function showCameraPermissionError() {
+        // Show camera error
+        function showCameraError() {
             const loadingScreen = document.getElementById('loadingScreen');
             loadingScreen.innerHTML = `
                 <div class="loader-content">
-                    <h1>⚠️ Camera Access Required</h1>
-                    <p>Please enable camera permissions:</p>
-                    <p><strong>Settings → Safari → Camera → Allow</strong></p>
+                    <h1>📷 Camera Access Needed</h1>
+                    <p>To use AR features, please:</p>
+                    <p><strong>1. Close other apps using camera</strong></p>
+                    <p><strong>2. Refresh this page</strong></p>
+                    <p><strong>3. Allow camera permissions</strong></p>
                     <button onclick="location.reload()" style="
                         margin-top: 30px;
                         padding: 15px 30px;
@@ -306,27 +256,11 @@
                         font-size: 1.1rem;
                         font-weight: 600;
                         cursor: pointer;
-                        box-shadow: 0 4px 15px rgba(0,122,255,0.3);
                     ">🔄 Try Again</button>
-                    <p style="margin-top: 20px; font-size: 0.9rem; opacity: 0.8;">
-                        This AR experience requires camera access to overlay artwork on real surfaces.
-                    </p>
                 </div>
             `;
+            loadingScreen.classList.remove('hidden');
         }
-
-        // Start everything when DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            handleiOS();
-            initARExperience();
-            
-            // Preload texture
-            const img = new Image();
-            img.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg';
-            img.onload = function() {
-                console.log('Image preloaded');
-            };
-        });
 
         // Add CSS animation
         const style = document.createElement('style');
@@ -339,7 +273,7 @@
         document.head.appendChild(style);
     </script>
 
-    <!-- Painting Texture -->
+    <!-- Your painting image -->
     <img id="painting-texture" 
          src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg" 
          style="display:none;" 
