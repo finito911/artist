@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AR Paint Sticking - Marker Based</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://jeromeetienne.github.io/AR.js/aframe/build/aframe-ar.min.js"></script>
+    <style>
+        .arjs-loader {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 9999;
+        }
+        .arjs-loader-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            border: 5px solid #3498db;
+            border-top: 5px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        .instructions {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            max-width: 80%;
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions">
+        Print and show this marker to camera:<br>
+        <a href="https://arjs-cdn.s3.eu-west-3.amazonaws.com/three.js/data/images/HIRO.jpg" target="_blank" style="color: #3498db;">Download HIRO marker</a>
+    </div>
+
+    <a-scene 
+        vr-mode-ui="enabled: false"
+        arjs='sourceType: webcam; detectionMode: mono; matrixCodeType: 3x3;'
+        renderer="logarithmicDepthBuffer: true;"
+        embedded
+        loading-screen="enabled: false">
+
+        <!-- Marker definition -->
+        <a-marker preset="hiro">
+            <!-- Your paint image that sticks to the marker -->
+            <a-entity 
+                geometry="primitive: plane; width: 1; height: 1" 
+                material="src: ../images/painting1.jpg; transparent: true; shader: flat"
+                position="0 0 0"
+                rotation="-90 0 0">
+            </a-entity>
+            
+            <!-- Optional: Add multiple paint samples -->
+            <a-entity 
+                geometry="primitive: plane; width: 0.8; height: 0.8" 
+                material="src: ../images/painting2.jpg; transparent: true; shader: flat"
+                position="0 0.6 0"
+                rotation="-90 0 0">
+            </a-entity>
+        </a-marker>
+
+        <!-- Camera -->
+        <a-entity camera></a-entity>
+    </a-scene>
+
+    <script>
+        // Handle AR loading states
+        window.addEventListener('arReady', function() {
+            console.log('AR is ready!');
+            document.querySelector('.instructions').innerHTML += '<br><strong>AR Ready! Show marker to camera.</strong>';
+        });
+
+        window.addEventListener('arError', function(err) {
+            console.error('AR Error:', err);
+            document.querySelector('.instructions').innerHTML += '<br><span style="color: red;">AR Error: ' + err.error + '</span>';
+        });
+
+        // Handle different paint selections
+        function changePaintImage(imagePath) {
+            const entity = document.querySelector('a-marker a-entity');
+            if (entity) {
+                entity.setAttribute('material', 'src', imagePath);
+            }
+        }
+    </script>
+</body>
+</html>
